@@ -3,6 +3,8 @@ project(bsdcoreutils)
 
 set(CMAKE_C_STANDARD 11)
 
+include(GNUInstallDirs)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # CMAKE Doesn't really have a Macro to detect Linux, Why?
