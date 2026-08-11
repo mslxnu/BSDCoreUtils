@@ -37,7 +37,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#ifndef __APPLE__
 #include <sys/mtio.h>
+#endif
 
 #include <ctype.h>
 #include <err.h>
@@ -200,13 +202,24 @@ setup(void)
 static void
 getfdtype(IO *io)
 {
-	struct mtget mt;
 	struct stat sb;
+#ifndef __APPLE__
+	struct mtget mt;
+#endif
 
 	if (fstat(io->fd, &sb))
 		err(1, "%s", io->name);
-	if (S_ISCHR(sb.st_mode))
+        
+	if (S_ISCHR(sb.st_mode)) {
+#ifdef __APPLE__
+		// macOS treats all character devices as standard character devices
+		io->flags |= ISCHR;
+#else
+		// Linux/BSD check if the character device is a tape drive
 		io->flags |= ioctl(io->fd, MTIOCGET, &mt) ? ISCHR : ISTAPE;
+#endif
+	}
+    
 	if (S_ISFIFO(sb.st_mode) || S_ISSOCK(sb.st_mode))
 		io->flags |= ISPIPE;
 }

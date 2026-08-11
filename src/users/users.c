@@ -39,6 +39,8 @@
 #include <unistd.h>
 #include <utmp.h>
 
+#include "compat.h"
+
 typedef char	namebuf[UT_NAMESIZE];
 
 int scmp(const void *, const void *);

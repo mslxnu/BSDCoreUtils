@@ -35,6 +35,7 @@
 #include <grp.h>
 #include <pwd.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #endif
 
 /* General imports for non-Apple platforms */
@@ -178,6 +179,13 @@ int fmt_scaled (long long, char *);
 
 /* getbsize.c */
 char *getbsize (int *, long *);
+
+/* getrandom.c */
+#if defined(__APPLE__)
+#define GRND_NONBLOCK 0x0001
+#define GRND_RANDOM   0x0002
+ssize_t getrandom (void *, size_t, unsigned int);
+#endif
 
 /* devname.c */
 #ifndef __MINGW32__

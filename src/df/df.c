@@ -46,7 +46,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#ifndef __APPLE__
 #include <mntent.h>
+#endif
 #include <assert.h>
 
 #ifndef _PATH_MOUNTED // Primarly for musl...
@@ -83,7 +85,7 @@ static void	 prtstat(struct mntinfo *, int, int, int);
 static long	 regetmntinfo(struct mntinfo **, long);
 static int	 selected(const char *);
 static void usage(void);
-static int getmntinfo(struct mntinfo **, int);
+static int dfgetmntinfo(struct mntinfo **, int);
 static void freemntinfo(struct mntinfo *, int);
 
 int	hflag, iflag, kflag, lflag, nflag, Pflag;
@@ -138,7 +140,7 @@ main(int argc, char *argv[])
 		usage();
 	}
 
-	mntsize = getmntinfo(&mntbuf, 0);
+	mntsize = dfgetmntinfo(&mntbuf, 0);
 	if (mntsize == 0)
 		err(1, "retrieving information on mounted file systems");
 
@@ -201,7 +203,7 @@ getmntpt(char *name)
 	struct mntinfo *mntbuf;
 	char *mntpt = NULL;
 
-	mntsize = getmntinfo(&mntbuf, 0);
+	mntsize = dfgetmntinfo(&mntbuf, 0);
 	for (i = 0; i < mntsize; i++) {
 		if (!strcmp(mntbuf[i].f_mntfromname, name)) {
 			mntpt = strdup(mntbuf[i].f_mntonname);
@@ -277,7 +279,7 @@ regetmntinfo(struct mntinfo **mntbufp, long mntsize)
 	struct statvfs svfsbuf;
 
 	if (!lflag && typelist == NULL)
-		return (nflag ? mntsize : getmntinfo(mntbufp, 0));
+		return (nflag ? mntsize : dfgetmntinfo(mntbufp, 0));
 
 	mntbuf = *mntbufp;
 	j = 0;
@@ -481,8 +483,64 @@ usage(void)
 }
 
 static int
-getmntinfo(struct mntinfo **mntbuf, int flags)
+dfgetmntinfo(struct mntinfo **mntbuf, int flags)
 {
+#ifdef __APPLE__
+	struct statfs *mac_buf = NULL;
+	int mac_mntsize = getmntinfo(&mac_buf, MNT_WAIT);
+	if (mac_mntsize <= 0) {
+		err(1, "getmntinfo");
+	}
+
+	struct mntinfo *list = calloc(mac_mntsize, sizeof(*list));
+	assert(list != NULL);
+	int mntsize = 0;
+
+	for (int i = 0; i < mac_mntsize; i++) {
+		struct statfs *ent = &mac_buf[i];
+
+		// Filter matching your Linux/BSD skip criteria
+		// macOS native drives use "/dev/disk*", network mounts use "afp_*", etc.
+		if (strncmp(ent->f_mntfromname, "/dev/", 5) != 0 && strcmp(ent->f_fstypename, "tmpfs") != 0) {
+			continue;
+		}
+
+		struct mntinfo *current = &list[mntsize];
+
+		/* Fill custom struct fields directly from statfs */
+		current->f_fstypename = strdup(ent->f_fstypename);
+		current->f_mntfromname = strdup(ent->f_mntfromname);
+		current->f_mntonname = strdup(ent->f_mntonname);
+		current->f_opts = strdup(""); // macOS handles mount options differently (in f_flags)
+
+		/* Fallback to statvfs for structural blocks/size details */
+		struct statvfs svfsbuf;
+		if (statvfs(current->f_mntonname, &svfsbuf) == -1) {
+			err(1, "statvfs");
+		}
+
+		current->f_flag = svfsbuf.f_flag;
+		current->f_blocks = svfsbuf.f_blocks;
+		current->f_bsize = svfsbuf.f_bsize;
+		current->f_bfree = svfsbuf.f_bfree;
+		current->f_bavail = svfsbuf.f_bavail;
+		current->f_files = svfsbuf.f_files;
+		current->f_ffree = svfsbuf.f_ffree;
+
+		mntsize++;
+	}
+
+	if (mntsize == 0) {
+		free(list);
+		*mntbuf = NULL;
+		return 0;
+	}
+
+	// Resize list down to the matched count
+	list = realloc(list, mntsize * sizeof(*list));
+	*mntbuf = list;
+	return mntsize;
+#else
 	struct mntinfo *list = NULL;
 	struct mntinfo *current = NULL;
 	struct mntent *ent = NULL;
@@ -538,6 +596,7 @@ getmntinfo(struct mntinfo **mntbuf, int flags)
 
 	*mntbuf = list;
 	return mntsize;
+#endif
 }
 
 static void

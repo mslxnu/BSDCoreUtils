@@ -184,6 +184,8 @@
 #include <wchar.h>
 #include <wctype.h>
 
+#include "compat.h"
+
 /* Something that, we hope, will never be a genuine line length,
  * indentation etc.
  */

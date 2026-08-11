@@ -37,7 +37,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#ifndef __APPLE__
 #include <sys/mtio.h>
+#endif
 #include <sys/time.h>
 
 #include <err.h>
@@ -114,7 +116,9 @@ pos_in(void)
 void
 pos_out(void)
 {
+#ifndef __APPLE__
 	struct mtop t_op;
+#endif
 	off_t cnt;
 	ssize_t n;
 
@@ -129,6 +133,7 @@ pos_out(void)
 		return;
 	}
 
+#ifndef __APPLE__
 	/* If no read access, try using mtio. */
 	if (out.flags & NOREAD) {
 		t_op.mt_op = MTFSR;
@@ -162,4 +167,5 @@ pos_out(void)
 				err(1, "%s", out.name);
 		break;
 	}
+#endif /* !__APPLE__ */
 }

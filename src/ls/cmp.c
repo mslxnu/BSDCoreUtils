@@ -42,6 +42,8 @@
 #include "ls.h"
 #include "extern.h"
 
+#include "compat.h"
+
 int
 namecmp(const FTSENT *a, const FTSENT *b)
 {

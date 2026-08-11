@@ -9,7 +9,10 @@ if (WITH_EXTERNAL_FTS)
     target_link_libraries(ls PRIVATE fts)
 endif()
 
-target_compile_definitions(ls PRIVATE -D_XOPEN_SOURCE)
+# _XOPEN_SOURCE hides user_from_uid/group_from_gid in the macOS SDK
+if(NOT APPLE)
+    target_compile_definitions(ls PRIVATE -D_XOPEN_SOURCE)
+endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     target_compile_definitions(ls PRIVATE -D_GNU_SOURCE)

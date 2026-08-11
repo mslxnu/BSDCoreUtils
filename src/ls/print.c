@@ -49,7 +49,9 @@
 #include <limits.h>
 #include <util.h>
 #include <sys/param.h>
+#if !defined(__APPLE__)
 #include <sys/sysmacros.h>
+#endif
 
 #include "ls.h"
 #include "extern.h"

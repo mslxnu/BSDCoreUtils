@@ -23,7 +23,7 @@
 #endif
 
 #ifdef __APPLE__
-#define LENGHT CC_SHA256_DIGEST_LENGHT
+#define LENGTH CC_SHA256_DIGEST_LENGTH
 #endif
 
 #ifdef __linux__
